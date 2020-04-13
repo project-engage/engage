@@ -8,4 +8,4 @@
     * Spark (pyspark) for large data handling  
     * Apache Airflow for orchestration  
     * Python Visualization using Python visualization module  
-    * Help define a data science pipeline for Headstorm  
+    * Help define a data science pipeline  
