@@ -1,0 +1,57 @@
+                 Generalized Linear Model Regression Results                  
+==============================================================================
+Dep. Variable:              confirmed   No. Observations:                   55
+Model:                            GLM   Df Residuals:                       53
+Model Family:                 Poisson   Df Model:                            1
+Link Function:                    log   Scale:                          1.0000
+Method:                          IRLS   Log-Likelihood:                -3676.5
+Date:                Thu, 07 May 2020   Deviance:                       7058.6
+Time:                        16:28:56   Pearson chi2:                 6.79e+03
+No. Iterations:                     7                                         
+Covariance Type:            nonrobust                                         
+================================================================================
+                   coef    std err          z      P>|z|      [0.025      0.975]
+--------------------------------------------------------------------------------
+Intercept        1.8625      0.079     23.633      0.000       1.708       2.017
+d_temp                0          0        nan        nan           0           0
+period_group     4.0186      0.079     50.612      0.000       3.863       4.174
+did1                  0          0        nan        nan           0           0
+================================================================================
+                 Generalized Linear Model Regression Results                  
+==============================================================================
+Dep. Variable:              recovered   No. Observations:                   55
+Model:                            GLM   Df Residuals:                       53
+Model Family:                 Poisson   Df Model:                            1
+Link Function:                    log   Scale:                          1.0000
+Method:                          IRLS   Log-Likelihood:                -491.28
+Date:                Thu, 07 May 2020   Deviance:                       853.70
+Time:                        16:28:56   Pearson chi2:                 1.05e+03
+No. Iterations:                     8                                         
+Covariance Type:            nonrobust                                         
+================================================================================
+                   coef    std err          z      P>|z|      [0.025      0.975]
+--------------------------------------------------------------------------------
+Intercept       -1.8326      0.500     -3.665      0.000      -2.813      -0.853
+d_temp                0          0        nan        nan           0           0
+period_group     4.9006      0.502      9.771      0.000       3.918       5.884
+did1                  0          0        nan        nan           0           0
+================================================================================
+                 Generalized Linear Model Regression Results                  
+==============================================================================
+Dep. Variable:                  death   No. Observations:                   55
+Model:                            GLM   Df Residuals:                       53
+Model Family:                 Poisson   Df Model:                            1
+Link Function:                    log   Scale:                          1.0000
+Method:                          IRLS   Log-Likelihood:                -183.99
+Date:                Thu, 07 May 2020   Deviance:                       259.10
+Time:                        16:28:56   Pearson chi2:                     252.
+No. Iterations:                    24                                         
+Covariance Type:            nonrobust                                         
+================================================================================
+                   coef    std err          z      P>|z|      [0.025      0.975]
+--------------------------------------------------------------------------------
+Intercept      -22.9228   1.15e+04     -0.002      0.998   -2.26e+04    2.26e+04
+d_temp                0          0        nan        nan           0           0
+period_group    25.2993   1.15e+04      0.002      0.998   -2.26e+04    2.26e+04
+did1                  0          0        nan        nan           0           0
+================================================================================
