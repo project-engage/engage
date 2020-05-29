@@ -216,7 +216,7 @@ def runDynamicSimulator(data1,coefsdfR,sir_names,xnamesr,horizon1):
         
 
 
-def runSimulator(data1,coefsdfR,sir_names,xnamesr,horizon1,date):
+def runSimulator(data1,coefsdfR,sir_names,xnamesr,horizon1,date, print_graph):
     	###DEFINE SIMULATION CONSTANTS#######################################################
 	# horizon = len(date_list)  # days . - forecast days
     # data1 starts from end of historical data date minus 7 days (from training)
@@ -269,27 +269,29 @@ def runSimulator(data1,coefsdfR,sir_names,xnamesr,horizon1,date):
                 df['pred_susceptible'] = y[0:horizon,0]
                 df['pred_confirmed'] = y[0:horizon,1]
                 df['pred_removed'] = y[0:horizon,2]
-                # plot results
-                plt.figure(1)
-                plt.figure(figsize=(15,10))
-                xtick_locator = AutoDateLocator()
-                xtick_formatter = AutoDateFormatter(xtick_locator)
 
-                date_list = pd.to_datetime(df['dateval'])
-                
-                ax = plt.axes()
-                ax.xaxis.set_major_locator(xtick_locator)
-                ax.xaxis.set_major_formatter(xtick_formatter)
-                plt.plot(date_list,y[:horizon,0],'b-')
-                plt.plot(date_list,y[:horizon,1],'r--')
-                plt.plot(date_list,y[:horizon,2],'g--')
-                plt.xlabel('Time')
-                plt.ylabel('Populations')
-                plt.legend(['Suceptibes','Confirmed','removed'])
-                plt.title('Prediction at '+state)
-                plt.savefig(os.path.join('covid_plot/covid_plot_'+state+'_'+str(date)+'.png'))
-                plt.clf()
-                plt.close()
+                if print_graph == True:
+                    # plot results
+                    plt.figure(1)
+                    plt.figure(figsize=(15,10))
+                    xtick_locator = AutoDateLocator()
+                    xtick_formatter = AutoDateFormatter(xtick_locator)
+
+                    date_list = pd.to_datetime(df['dateval'])
+                    
+                    ax = plt.axes()
+                    ax.xaxis.set_major_locator(xtick_locator)
+                    ax.xaxis.set_major_formatter(xtick_formatter)
+                    plt.plot(date_list,y[:horizon,0],'b-')
+                    plt.plot(date_list,y[:horizon,1],'r--')
+                    plt.plot(date_list,y[:horizon,2],'g--')
+                    plt.xlabel('Time')
+                    plt.ylabel('Populations')
+                    plt.legend(['Suceptibes','Confirmed','removed'])
+                    plt.title('Prediction at '+state)
+                    plt.savefig(os.path.join('covid_plot/covid_plot_'+state+'_'+str(date)+'.png'))
+                    plt.clf()
+                    plt.close()
                 out_df = out_df.append(df,ignore_index=True )   
             
             
@@ -304,7 +306,7 @@ def runSimulator(data1,coefsdfR,sir_names,xnamesr,horizon1,date):
 
 
 
-def causal_simulation(path,start_date,f_start_date,datafile="dataset_full.csv",govpolicyfile="gov_dates_mandates.csv"):
+def causal_simulation(path,start_date,f_start_date,datafile="dataset_full.csv",govpolicyfile="gov_dates_mandates.csv", print_graph=True):
     data = pd.read_csv(path+"/"+datafile)
     
     start_dt = datetime.strptime(start_date, '%m/%d/%y').strftime('%Y-%m-%d')
@@ -502,14 +504,14 @@ def causal_simulation(path,start_date,f_start_date,datafile="dataset_full.csv",g
     coefsdfR=r_combined,
     sir_names=['susceptible','confirmed','death','removed'],
     xnamesr=['Intercept','gov_action','TAVG','lag_confirmed'],
-    horizon1=60, date=date_start_sim)
+    horizon1=60, date=date_start_sim, print_graph)
     sim_data_output_after.to_csv("simulator_output/simulations_adjust_at_"+str(date_start_sim)+".csv")
 
     sim_data_output_before = runSimulator(data1=data3[data3['holdout']==1],
     coefsdfR=r_combined,
     sir_names=['susceptible','confirmed','death','removed'],
     xnamesr=['Intercept','gov_action','TAVG','lag_confirmed'],
-    horizon1=60, date=0)
+    horizon1=60, date=0, print_graph)
     sim_data_output_before.to_csv("simulator_output/simulations_adjust_at_"+str(date_start_sim)+".csv")
 
     sim_data_compare = sim_data_output_after.merge(sim_data_output_before, on=['index', 'province_state', 'country','date','dateval','location_name'], suffixes=('_after', '_before'))
@@ -520,27 +522,28 @@ def causal_simulation(path,start_date,f_start_date,datafile="dataset_full.csv",g
     sim_data_compare = sim_data_compare.loc[:, ['province_state', 'country','date','dateval','location_name','pred_susceptible_after', 'pred_confirmed_after', 'pred_removed_after', 'pred_susceptible_before', 'pred_confirmed_before', 'pred_removed_before', 'diff_susceptible', 'diff_confirmed', 'diff_removed']]
     sim_data_compare.to_csv("simulator_output/simulations_compare"+str(date_start_sim)+".csv")
 
-    for location in sim_data_compare['location_name'].drop_duplicates():
-        dat = sim_data_compare[(sim_data_compare['location_name']==location)].sort_values(by=['date'])
-        # plot results
-        plt.figure(1)
-        plt.figure(figsize=(15,10))
-        xtick_locator = AutoDateLocator()
-        xtick_formatter = AutoDateFormatter(xtick_locator)
-        date_list = pd.to_datetime(dat['dateval'])
-        ax = plt.axes()
-        ax.xaxis.set_major_locator(xtick_locator)
-        ax.xaxis.set_major_formatter(xtick_formatter)
-        plt.plot(date_list,dat['diff_susceptible'],'b-')
-        plt.plot(date_list,dat['diff_confirmed'],'r--')
-        plt.plot(date_list,dat['diff_removed'],'g--')
-        plt.xlabel('Time')
-        plt.ylabel('Populations')
-        plt.title('Compare Before/After Gov. Intervention Adjust at '+''.join(e for e in location if e.isalnum())+' : '+str(date_start_sim))
-        plt.legend(['Diff Suceptibes','Diff Confirmed','Diff Removed'])
-        plt.savefig(os.path.join('covid_plot/covid_plot_compare_'+''.join(e for e in location if e.isalnum())+'_'+str(date_start_sim)+'.png'))
-        plt.clf()
-        plt.close()    
+    if print_graph == True:
+        for location in sim_data_compare['location_name'].drop_duplicates():
+            dat = sim_data_compare[(sim_data_compare['location_name']==location)].sort_values(by=['date'])
+            # plot results
+            plt.figure(1)
+            plt.figure(figsize=(15,10))
+            xtick_locator = AutoDateLocator()
+            xtick_formatter = AutoDateFormatter(xtick_locator)
+            date_list = pd.to_datetime(dat['dateval'])
+            ax = plt.axes()
+            ax.xaxis.set_major_locator(xtick_locator)
+            ax.xaxis.set_major_formatter(xtick_formatter)
+            plt.plot(date_list,dat['diff_susceptible'],'b-')
+            plt.plot(date_list,dat['diff_confirmed'],'r--')
+            plt.plot(date_list,dat['diff_removed'],'g--')
+            plt.xlabel('Time')
+            plt.ylabel('Populations')
+            plt.title('Compare Before/After Gov. Intervention Adjust at '+''.join(e for e in location if e.isalnum())+' : '+str(date_start_sim))
+            plt.legend(['Diff Suceptibes','Diff Confirmed','Diff Removed'])
+            plt.savefig(os.path.join('covid_plot/covid_plot_compare_'+''.join(e for e in location if e.isalnum())+'_'+str(date_start_sim)+'.png'))
+            plt.clf()
+            plt.close() 
 
 
 if __name__=="__main__":
@@ -552,7 +555,7 @@ if __name__=="__main__":
     start_date="2/22/20"
     horizon = 30
 
-    causal_simulation(path=path,start_date=start_date,f_start_date="4/20/20", datafile="dataset_full.csv",govpolicyfile="gov_dates_mandates.csv")
+    causal_simulation(path=path,start_date=start_date,f_start_date="4/20/20", datafile="dataset_full.csv",govpolicyfile="gov_dates_mandates.csv", print_graph=True)
 
     exit(0)
 
