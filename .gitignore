@@ -668,4 +668,13 @@ healthchecksdb
 # Backup folder for Package Reference Convert tool in Visual Studio 2017
 MigrationBackup/
 
+# Include data directories
+!scripts/weather_data
+scripts/weather_data/*
+!scripts/covid_plot
+scripts/covid_plot/*
+!scripts/simulator_output
+scripts/simulator_output/*
+scripts/.vscode/**
+
 # End of https://www.gitignore.io/api/vim,macos,python,pycharm,windows,sublimetext,visualstudio,jupyternotebooks
