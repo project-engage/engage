@@ -671,10 +671,13 @@ MigrationBackup/
 # Include data directories
 !scripts/weather_data
 scripts/weather_data/*
+!scripts/weather_data/weather_example.csv
 !scripts/covid_plot
 scripts/covid_plot/*
+!scripts/covid_plot/covid_plot_compare_AlbaniaUNK_20200510.png
 !scripts/simulator_output
 scripts/simulator_output/*
+!scripts/simulator_output/simulations_compare20200510.csv
 scripts/.vscode/**
 
 # End of https://www.gitignore.io/api/vim,macos,python,pycharm,windows,sublimetext,visualstudio,jupyternotebooks
