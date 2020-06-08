@@ -505,14 +505,14 @@ def causal_simulation(path,start_date,f_start_date,datafile="dataset_full.csv",g
     sir_names=['susceptible','confirmed','death','removed'],
     xnamesr=['Intercept','gov_action','TAVG','lag_confirmed'],
     horizon1=60, date=date_start_sim, print_graph=print_graph)
-    sim_data_output_after.to_csv("simulator_output/simulations_adjust_at_"+str(date_start_sim)+".csv")
+    sim_data_output_after.to_csv("simulator_output/simulations_after_adjust_at_"+str(date_start_sim)+".csv")
 
     sim_data_output_before = runSimulator(data1=data3[data3['holdout']==1],
     coefsdfR=r_combined,
     sir_names=['susceptible','confirmed','death','removed'],
     xnamesr=['Intercept','gov_action','TAVG','lag_confirmed'],
     horizon1=60, date=0, print_graph=print_graph)
-    sim_data_output_before.to_csv("simulator_output/simulations_adjust_at_"+str(date_start_sim)+".csv")
+    sim_data_output_before.to_csv("simulator_output/simulations_before_adjust_at_"+str(date_start_sim)+".csv")
 
     sim_data_compare = sim_data_output_after.merge(sim_data_output_before, on=['index', 'province_state', 'country','date','dateval','location_name'], suffixes=('_after', '_before'))
     sim_data_compare['diff_susceptible'] = sim_data_compare['pred_susceptible_after'] - sim_data_compare['pred_susceptible_before']
