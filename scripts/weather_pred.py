@@ -128,12 +128,12 @@ if __name__ == '__main__':
 
 	print("----Load Station----")
 	
-	weather_station_list = pd.read_csv("weather_meta_data/ghcnd_stations.csv")[['id', 'state']]
+	weather_station_list = pd.read_csv("data/weather_meta_data/ghcnd_stations.csv")[['id', 'state']]
 	weather_station_list['state'] = weather_station_list['state'].str.strip()
 	weather_station_list['state'] = weather_station_list['state'].replace('', 'UNK')
 	print(weather_station_list)
 
-	weather_country_list = pd.read_csv("weather_meta_data/ghcnd_countries.csv")
+	weather_country_list = pd.read_csv("data/weather_meta_data/ghcnd_countries.csv")
 	print(weather_country_list)
 	weather_country_list.rename(columns={"code": "country_region", "name" : "country_name"}, inplace=True)
 	print(weather_country_list)
@@ -143,8 +143,7 @@ if __name__ == '__main__':
 
 	year_list = ['2017', '2018', '2019', '2020']
 
-	# os.chdir("")
-	for file in glob.glob("./weather_data/*.csv"):
+	for file in glob.glob("./data/weather_data/*.csv"):
 		if any(ele in file for ele in year_list):
 			weather_file_list.append(file)
 		
@@ -161,17 +160,6 @@ if __name__ == '__main__':
 		li.append(df)
 
 	weather_frame = pd.concat(li, axis=0, ignore_index=True)
-	# weather_frame = weather_frame[['id', 'date', 'element', 'value']]
-	# weather_frame['date'] = weather_frame['date'].astype(str)
-	# weather_frame['date'] = weather_frame['date'].str.replace('-', '')
-	# weather_frame['date'] = weather_frame['date'].astype(int)
-
-	# print(weather_frame)
-
-	# weather_frame = pd.pivot_table(weather_frame, values='value', index=['id', 'date'], columns='element')
-	# weather_frame = weather_frame[['PRCP', 'TAVG', 'SNOW', 'SNWD']]
-	# weather_frame.reset_index(drop=False, inplace=True)
-	# weather_frame['country_region'] = weather_frame['id'].str[:2]
 	
 	weather_frame = weather_frame.merge(weather_station_list, on=['id'], how='left')
 	weather_frame = weather_frame[['date', 'country_region', 'state', 'TAVG']]
@@ -246,12 +234,6 @@ if __name__ == '__main__':
 			
 			interpolate_data = interpolate_data.append(temp_df2)
 
-	# interpolate_data.fillna(0, inplace=True)
-	# print(interpolate_data)
-	# interpolate_data.to_csv('dataset_weather_new_interpolate.csv')
-
-	# print(state_abs_max_df)
-
 	### Model Training and Future Weather Prediction
 
 	pred_actual = pd.DataFrame()
@@ -277,7 +259,7 @@ if __name__ == '__main__':
 			location_df.dropna(axis='columns', inplace=True)
 			location_df.set_index('date', inplace=True)
 
-			# print('Location : ', country, state)
+			print('Location : ', country, state)
 			if len(location_df.columns) == 0:
 				continue
 			print(location_df.describe())
@@ -290,7 +272,7 @@ if __name__ == '__main__':
 
 			# Open the log file for that state		
 
-			# file = open('weather_log/'+country+"_"+state+"_log.txt","w")
+			# file = open('output/weather_log/'+country+"_"+state+"_log.txt","w")
 			# file.write('Location : ' + country + ", " + state + "\n")
 			# file.write(location_df.describe().to_string() + "\n")
 
@@ -303,15 +285,13 @@ if __name__ == '__main__':
 				data = location_df[f]
 				train_data = data[:-n_test]
 				test_data = data[-n_test:]
-				# print(data)
+
 				# split into train/test samples
 				X, y = split_sequence(data, n_steps)
 				train_x = X[:-n_test]
 				train_y = y[:-n_test]
 				test_x = X[-n_test:]
 				test_y = y[-n_test:]
-
-				# print(train_x.shape)
 
 				train_x = train_x.reshape((train_x.shape[0], train_x.shape[1], n_features))
 				test_x = test_x.reshape((test_x.shape[0], test_x.shape[1], n_features))
@@ -322,7 +302,6 @@ if __name__ == '__main__':
 				# create weather prediction model
 				model = generate_model(n_steps, n_features, train_x)
 				earlystopping = EarlyStopping(monitor='loss', patience=25, mode='min', restore_best_weights=True)
-				# earlystopping2 = EarlyStopping(monitor='loss', mode='min', baseline=0.005)
 				callbacks = [earlystopping]
 
 				# train the model
@@ -331,12 +310,12 @@ if __name__ == '__main__':
 				train_weights = model.get_weights()
 
 				# save model
-				# model.save('weather_model/'+country+"_"+state+"_"+f+"_model.h5")
+				# model.save('output/weather_model/'+country+"_"+state+"_"+f+"_model.h5")
 
 				# limit_mem()
 
 				# # load model
-				# model = tf.models.load_model('weather_model/'+country+"_"+state+"_"+f+"_model.h5")
+				# model = tf.models.load_model('output/weather_model/'+country+"_"+state+"_"+f+"_model.h5")
 				train_weights = model.get_weights()
 
 				test_model = generate_model(n_steps, n_features, test_x)
@@ -364,7 +343,7 @@ if __name__ == '__main__':
 				# pyplot.title("Prediction/Actual of "+f+" in "+country+", "+state)
 				# pyplot.plot([p * max_abs for p in test_y], color='blue', label="prediction" )
 				# pyplot.plot([pred[0] * max_abs for pred in pred_y], color='red', label="prediction")
-				# pyplot.savefig(os.path.join('weather_plot/'+country+"_"+state+"_"+f+'_plot.png'))
+				# pyplot.savefig(os.path.join('output/weather_plot/'+country+"_"+state+"_"+f+'_plot.png'))
 				# pyplot.clf()
 
 				# Predict the next n days
@@ -404,8 +383,6 @@ if __name__ == '__main__':
 				gc.collect()
 				
 
-
-
 			# record all result to files
 
 			temp_pred_actual['state'] = state
@@ -427,15 +404,15 @@ if __name__ == '__main__':
 
 			# print(future_pred_df)
 
-			pred_actual.to_csv('weather_output/'+'pred_actual.csv', index=True)
-			future_pred_df.to_csv('weather_output/'+'future_pred.csv', index=True)
-			# rsme_score_df.to_csv('weather_model/'+'rsme_score.csv', index=True)
+			pred_actual.to_csv('output/weather_output/'+'pred_actual.csv', index=True)
+			future_pred_df.to_csv('output/weather_output/'+'future_pred.csv', index=True)
+			rsme_score_df.to_csv('output/weather_model/'+'rsme_score.csv', index=True)
 
 		print(pred_actual)
 		print(future_pred_df)
 
 		# file.close()
 
-		pred_actual.to_csv('weather_output/'+'pred_actual.csv', index=True)
-		future_pred_df.to_csv('weather_output/'+'future_pred.csv', index=True)
-		# rsme_score_df.to_csv('weather_model/'+'rsme_score.csv', index=True)
+		pred_actual.to_csv('output/weather_output/'+'pred_actual.csv', index=True)
+		future_pred_df.to_csv('output/weather_output/'+'future_pred.csv', index=True)
+		rsme_score_df.to_csv('output/weather_model/'+'rsme_score.csv', index=True)

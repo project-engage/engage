@@ -25,7 +25,6 @@ from patsy import dmatrices
 
 def load_data(path,sourcefile):
         df = pd.read_csv(path+"/"+sourcefile)
-        #df['date'] =  pd.to_datetime(df['date'], format='%Y%m%d').dt.strftime('%m/%d/%y')
         return df
 
 
@@ -104,8 +103,7 @@ def solve_one(state,df,cfr,alpha,beta,c_x,c_names,N,horizon):
             z2 = 0.0
         try:      
             for i in range(len(c_x)):
-            
-                    z1 = z1 + df[c_names[i]].values[tt]*c_x[i]
+                z1 = z1 + df[c_names[i]].values[tt]*c_x[i]
                      
         except:
             z1 = z1
@@ -119,7 +117,6 @@ def solve_one(state,df,cfr,alpha,beta,c_x,c_names,N,horizon):
 
     t = [i for i in range(horizon)]
     # ############SETUP AND RUN THE SIMULATION=============
-    #try:
     h0 = [df['population'].values[0],df['confirmed'].values[0],df['removed'].values[0]]
      
     y = odeint(mysysfunc,h0,t) # integrate
@@ -131,7 +128,7 @@ def solve_one(state,df,cfr,alpha,beta,c_x,c_names,N,horizon):
     
 
 def runDynamicSimulator(data1,coefsdfR,sir_names,xnamesr,horizon1):
-    	###DEFINE SIMULATION CONSTANTS#######################################################
+    ###DEFINE SIMULATION CONSTANTS#######################################################
 	# horizon = len(date_list)  # days . - forecast days
     # data1 starts from end of historical data date minus 7 days (from training)
     data = data1.copy()
@@ -289,7 +286,7 @@ def runSimulator(data1,coefsdfR,sir_names,xnamesr,horizon1,date_gov_adjust, prin
                     plt.ylabel('Populations')
                     plt.legend(['Suceptibes','Confirmed','removed'])
                     plt.title('Prediction at '+state)
-                    plt.savefig(os.path.join('covid_plot/covid_plot_'+state+'_'+str(date_gov_adjust)+'.png'))
+                    plt.savefig(os.path.join('output/covid_plot/covid_plot_'+state+'_'+str(date_gov_adjust)+'.png'))
                     plt.clf()
                     plt.close()
                 out_df = out_df.append(df,ignore_index=True )   
@@ -308,7 +305,6 @@ def runSimulator(data1,coefsdfR,sir_names,xnamesr,horizon1,date_gov_adjust, prin
 
 def causal_simulation(path,start_date,f_start_date,datafile="dataset_full.csv",govpolicyfile="gov_dates_mandates.csv", num_date_omit=0, print_graph=True):
     data = pd.read_csv(path+"/"+datafile)
-
     
     start_dt = datetime.strptime(start_date, '%m/%d/%y').strftime('%Y-%m-%d')
     print(start_dt)
@@ -331,7 +327,6 @@ def causal_simulation(path,start_date,f_start_date,datafile="dataset_full.csv",g
     data['state'] = data['province_state']
    
     zx = 0
-         
     
     data = psql.sqldf("""
     select province_state , country_region as country, date, confirmed,
@@ -355,17 +350,12 @@ def causal_simulation(path,start_date,f_start_date,datafile="dataset_full.csv",g
 
     print(data)
     
-    data_save = data.copy()  
+    data_save = data.copy()
+
     # data smoothing to correct irregular data issues: like dropped cumulative values
     data1 = pd.DataFrame()
      
     z = 0
-
-    # data['recovered'] = data['recovered']/100+0.0
-    # data['confirmed'] = data['confirmed']/100+0.0
-    # data['death'] = data['death']/100+0.0
-    # data['population'] = data['population']/100+0.0
-    # data['TAVG'] = data['TAVG']/100+0.0
     
     for state in data['state'].drop_duplicates():
             dat = data[(data['state']==state)].sort_values(by=['dateval'])
@@ -409,7 +399,6 @@ def causal_simulation(path,start_date,f_start_date,datafile="dataset_full.csv",g
                 dat['removed'] = dat['death'] + dat['recovered'] 
                 
                 for t in range(len(dat)):
-                        
                     
                     if t>0 and t<=len(dat):
                         dat['lag_confirmed'].values[t] = dat['confirmed'].values[t-1]
@@ -420,10 +409,6 @@ def causal_simulation(path,start_date,f_start_date,datafile="dataset_full.csv",g
                         dat['d_death'].values[t] = dat['death'].values[t]-dat['death'].values[t-1]
                         dat['d_removed'].values[t] = dat['removed'].values[t]-dat['removed'].values[t-1]
 
-                               
-                # if z==0:
-                #     data1 = dat
-                # else:    
                 data1 = data1.append(dat,ignore_index=True)
                 z = z +1
                          
@@ -432,7 +417,7 @@ def causal_simulation(path,start_date,f_start_date,datafile="dataset_full.csv",g
     rb = np.mean(data[data['R_0']>0]['R_0'])
     data['R_0'] = np.where(data['R_0']==0,rb,data['R_0'])
     data = data.fillna(0)   
-    data.to_csv(path+"/input_data.csv")
+    data.to_csv("output/simulation_output/input_data.csv")
     if num_date_omit > 0:
         data_train = data[(data['removed']>0) & ((data['holdout']==0) | (data['dateval']<=temp_start_training_date))][['dateval','Intercept','state','TAVG','gov_action','is_freezing','is_cold','is_warm','is_hot','lag_confirmed','lag_death','lag_recovered','d_death','d_recovered','d_removed','removed']]
         print(temp_start_training_date)
@@ -476,7 +461,7 @@ def causal_simulation(path,start_date,f_start_date,datafile="dataset_full.csv",g
     r_combined['TAVG'] = po_results.fe_params['TAVG']
     
     r_combined.fillna(0.0)
-    r_combined.to_csv(path+"/recover_coefs.csv")
+    r_combined.to_csv("output/simulation_output/recover_coefs.csv")
     
     mean_beta = np.mean(r_combined[r_combined['lag_confirmed']>0]['lag_confirmed'])
     r_combined['lag_confirmed'] = np.where(r_combined['lag_confirmed']<0,mean_beta,r_combined['lag_confirmed'])
@@ -531,14 +516,14 @@ def causal_simulation(path,start_date,f_start_date,datafile="dataset_full.csv",g
     sir_names=['susceptible','confirmed','death','removed'],
     xnamesr=['Intercept','gov_action','TAVG','lag_confirmed'],
     horizon1=60, date_gov_adjust=date_start_sim, print_graph=print_graph)
-    sim_data_output_after.to_csv("simulator_output/simulations_after_adjust_at_"+str(date_start_sim)+"_omitlastD_"+str(num_date_omit)+".csv")
+    sim_data_output_after.to_csv("output/simulation_output/simulations_after_adjust_at_"+str(date_start_sim)+"_omitlastD_"+str(num_date_omit)+".csv")
 
     sim_data_output_before = runSimulator(data1=sim_data,
     coefsdfR=r_combined,
     sir_names=['susceptible','confirmed','death','removed'],
     xnamesr=['Intercept','gov_action','TAVG','lag_confirmed'],
     horizon1=60, date_gov_adjust=0, print_graph=print_graph)
-    sim_data_output_before.to_csv("simulator_output/simulations_before_adjust_at_"+str(date_start_sim)+"_omitlastD_"+str(num_date_omit)+".csv")
+    sim_data_output_before.to_csv("output/simulation_output/simulations_before_adjust_at_"+str(date_start_sim)+"_omitlastD_"+str(num_date_omit)+".csv")
 
     sim_data_compare = sim_data_output_after.merge(sim_data_output_before, on=['index', 'province_state', 'country','date','dateval','location_name'], suffixes=('_after', '_before'))
     sim_data_compare['diff_susceptible'] = sim_data_compare['pred_susceptible_after'] - sim_data_compare['pred_susceptible_before']
@@ -546,7 +531,7 @@ def causal_simulation(path,start_date,f_start_date,datafile="dataset_full.csv",g
     sim_data_compare['diff_removed'] = sim_data_compare['pred_removed_after'] - sim_data_compare['pred_removed_before']
 
     sim_data_compare = sim_data_compare.loc[:, ['province_state', 'country','date','dateval','location_name','pred_susceptible_after', 'pred_confirmed_after', 'pred_removed_after', 'pred_susceptible_before', 'pred_confirmed_before', 'pred_removed_before', 'diff_susceptible', 'diff_confirmed', 'diff_removed']]
-    sim_data_compare.to_csv("simulator_output/simulations_compare"+str(date_start_sim)+"_omitlastD_"+str(num_date_omit)+".csv")
+    sim_data_compare.to_csv("output/simulation_output/simulations_compare"+str(date_start_sim)+"_omitlastD_"+str(num_date_omit)+".csv")
 
     if print_graph == True:
         for location in sim_data_compare['location_name'].drop_duplicates():
@@ -567,14 +552,14 @@ def causal_simulation(path,start_date,f_start_date,datafile="dataset_full.csv",g
             plt.ylabel('Populations')
             plt.title('Compare Before/After Gov. Intervention Adjust at '+''.join(e for e in location if e.isalnum())+' : '+str(date_start_sim))
             plt.legend(['Diff Suceptibes','Diff Confirmed','Diff Removed'])
-            plt.savefig(os.path.join('covid_plot/covid_plot_compare_'+"omitlastD_"+str(num_date_omit)+''.join(e for e in location if e.isalnum())+'_'+str(date_start_sim)+'.png'))
+            plt.savefig(os.path.join('output/covid_plot/covid_plot_compare_'+"omitlastD_"+str(num_date_omit)+''.join(e for e in location if e.isalnum())+'_'+str(date_start_sim)+'.png'))
             plt.clf()
             plt.close()
 
 
 if __name__=="__main__":
 
-    path="simulation_data"
+    path="data/simulation_data"
     datasource="dataset_full.csv"
     pop_source="pop_dataset.csv"
     location_name="country_region"
@@ -584,54 +569,4 @@ if __name__=="__main__":
     causal_simulation(path=path,start_date=start_date,f_start_date="4/20/20", datafile="dataset_full.csv",govpolicyfile="gov_dates_mandates.csv", print_graph=True, num_date_omit=7)
 
     exit(0)
-
-    # locations_csv=['Italy','Korea, South','United States']
-    # df = load_data(path=path,sourcefile=datasource)
-    # df['dateval'] =  pd.to_datetime(df['date'], format='%Y%m%d').dt.strftime('%m/%d/%y')
-    # df['state'] = df['province_state']
-    
-    
-    # df = df.rename(columns={'PRCP':'prcp','TAVG':'temp'})
-    # df['temp'] = df['temp'] /10
-    # df['prcp'] = df['prcp'] /10
-    # dataset = df.rename(columns={'PRCP':'prcp','TAVG':'temp'})          
-    # dataset['d_temp'] = np.where(dataset['temp']>=20, 1, 0)
-    # dataset['d_prcp'] = np.where(dataset['prcp']>=np.average(dataset['prcp'])+np.std(dataset['prcp']), 1, 0)
-    # newdate = datetime.strptime("3/20/20", '%m/%d/%y')     
-    # dataset['period_group'] = np.where(dataset['date'].astype(int)>=20200320, 1, 0)
-    # dataset['did1'] = dataset['period_group']*dataset['d_temp']
-    # test_covid(dataset=dataset,location_name=location_name)
-    #====================================================================================
-
-    # datasource="dataset_full.csv"
-    # df = load_data(path=path,sourcefile=datasource)
-    # df['dateval'] =  pd.to_datetime(df['date'], format='%Y%m%d').dt.strftime('%m/%d/%y')
-    # df['state'] = df['province_state']
-    # g_df = load_data(path=path,sourcefile="agg_gov_data.csv")[['state','CS','ED','GP','NEBC','OTH','SAH']]
-    # df = pd.merge(df,g_df,on=['state'],how="left").fillna(0)
-
-    #df = df.rename(columns={'PRCP':'prcp','TAVG':'temp'})
-
-    # df['temp1'] = df['TAVG']
-    # df['prcp1'] = df ['PRCP']     
-    # df['temp1'] = df['temp1'] /10
-    # df['prcp1'] = df['prcp1'] /10   
-    #dataset = df.rename(columns={'PRCP':'prcp','TAVG':'temp'})          
-    # dataset = df.copy()
-    # dataset['d_temp'] = np.where(dataset['temp1']>=20, 1, 0)
-    # dataset['d_prcp'] = np.where(dataset['prcp1']>=np.average(dataset['prcp1'])+np.std(dataset['prcp1']), 1, 0)
-    # newdate = datetime.strptime("3/20/20", '%m/%d/%y')     
-    # dataset['period_group'] = np.where(dataset['date'].astype(int)>=20200320, 1, 0)
-    # dataset['did1'] = dataset['period_group']*dataset['d_temp']
-    # print(dataset.columns)
-
-    # data = psql.sqldf("""
-    # select {loc},d_temp,period_group,did1,d_prcp,
-    # CS,ED,GP,NEBC,OTH,SAH,
-    # avg(ifnull(recovered,0)) as recovered,
-    # avg(ifnull(death,0)) as death,
-    # avg(ifnull(confirmed,0)) as positive from dataset
-    # group by 1,2,3,4,5,6,7,8,9,10
-    # """.format(loc=location_name))
-    # test_gov_covid(dataset=data,location_name=location_name)
 
