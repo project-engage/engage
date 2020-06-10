@@ -22,12 +22,40 @@ import pandasql as psql
 
 from patsy import dmatrices
 
+import matplotlib as mpl
+mpl.rc('figure', max_open_warning = 0)
+
 
 def load_data(path,sourcefile):
         df = pd.read_csv(path+"/"+sourcefile)
         return df
 
-
+def generate_dataset(data, r_combined):
+    tti = 0
+    states = data['state'].drop_duplicates()
+    data2 = data.copy()
+    data3 = pd.DataFrame()
+    for s in states:
+        rc = r_combined[r_combined['state']==s]
+        #print(rc)
+        dat = data2[data2['state']==s]
+         
+        if len(dat)>0 and len(rc)>0:
+            print(s)
+            dat = dat.sort_values(by=['dateval'])
+            #dat = dat.reset_index()
+            beta = rc['lag_confirmed'].values[0]
+            N = dat['population'].values[0]
+            dat['susceptible'] = np.where(dat['holdout']==0, N+0.0,0.0)
+            alpha = dat['R_0'].values[0]*beta
+            dat['alpha'] = alpha
+            if tti==0:
+               data3 = dat
+            else:
+                data3 = data3.append(dat,ignore_index=True )
+            tti = tti +1
+    print(data3['state'].drop_duplicates())
+    return data3
 
 def test_covid(dataset,location_name):
      
@@ -430,7 +458,13 @@ def causal_simulation(path,start_date,f_start_date,datafile="dataset_full.csv",g
     model = sm.MixedLM(endog, exog, exog_re=exog[[ 'Intercept','lag_confirmed']],  groups=data_train["state"])
     po_results = model.fit()
     print(po_results.summary())
-     
+    
+    
+    
+
+
+
+    # Get Coefficient
  
     k = []
     v1 = []
@@ -449,11 +483,12 @@ def causal_simulation(path,start_date,f_start_date,datafile="dataset_full.csv",g
         else:    
             v2 = v2 +[listOfNumbers[0] ]
             v3 = v3 +[listOfNumbers[1] ]
-        
         k = k + [i]
+        
     r_combined = pd.DataFrame({'state':k,'coef_name':v1,'coef_value':v2,'re_lag_confirmed':v3})
     
     r_combined['fe_Intercept'] = po_results.fe_params['Intercept']
+
     r_combined['Intercept'] = r_combined['fe_Intercept']+r_combined['coef_value']
    
     r_combined['lag_confirmed'] = po_results.fe_params['lag_confirmed'] +r_combined["re_lag_confirmed"]
@@ -466,11 +501,71 @@ def causal_simulation(path,start_date,f_start_date,datafile="dataset_full.csv",g
     mean_beta = np.mean(r_combined[r_combined['lag_confirmed']>0]['lag_confirmed'])
     r_combined['lag_confirmed'] = np.where(r_combined['lag_confirmed']<0,mean_beta,r_combined['lag_confirmed'])
     
+    # Get Prediction and Bias
+
+    t_dat = generate_dataset(data, r_combined)
+    if num_date_omit > 0:
+        t_dat = t_dat[(t_dat['removed']>0) & ((t_dat['holdout']==0) | (t_dat['dateval']<=temp_start_training_date))]
+    else:
+        t_dat = t_dat[(t_dat['removed']>0) & (t_dat['holdout']==0)]
+
+    pred_on_train = runSimulator(data1=t_dat,
+    coefsdfR=r_combined,
+    sir_names=['susceptible','confirmed','death','removed'],
+    xnamesr=['Intercept','gov_action','TAVG','lag_confirmed'],
+    horizon1=60, date_gov_adjust=0, print_graph=print_graph)
+
+    # == Adjust Prediction of Removed with Bias
+
+    pred_on_train['bias_removed'] = pred_on_train['pred_removed'] - pred_on_train['removed']
+    # pred_on_train.to_csv('output/simulation_output/pred_on_train.csv')
+    mean_bias = pred_on_train.groupby('location_name')['bias_removed'].mean().reset_index()
+    mean_bias.to_csv('output/simulation_output/bias.csv')
+
+    loc_list = set(pred_on_train['location_name'])
+    for loc in loc_list:
+        bias = mean_bias.loc[mean_bias['location_name']==loc, 'bias_removed'].iloc[0]
+        if bias > 0:
+            pred_on_train.loc[pred_on_train['location_name']==loc, 'pred_removed'] = pred_on_train.loc[pred_on_train['location_name']==loc, 'pred_removed']-bias
+        elif bias < 0:
+            pred_on_train.loc[pred_on_train['location_name']==loc, 'pred_removed'] = pred_on_train.loc[pred_on_train['location_name']==loc, 'pred_removed']+bias
+
+        loc_name = "".join(c for c in loc if c.isalnum())
+        temp_for_plot = pred_on_train.loc[pred_on_train['location_name']==loc, ['dateval', 'removed', 'pred_removed']]
+        plt.figure(figsize=(12,12))
+        fig = temp_for_plot.plot(x='dateval', y=['removed', 'pred_removed'], rot=45, ax=plt.gca()).get_figure()
+        fig.savefig(os.path.join('output/covid_plot/actual_pred/covid_plot_compare_'+loc_name+'.png'))
+        fig.clf()
+
+    pred_on_train['pred_removed'] = np.where(pred_on_train['pred_removed']<0, 0, pred_on_train['pred_removed'])
+
+
+    pred_on_train.to_csv('output/simulation_output/adjusted_pred_on_train.csv')
+
+    print(pred_on_train)
+
+    # Adjust R-Combined with Bias
+
+    mean_bias2 = mean_bias.copy()
+    r_combined2 = r_combined.copy()
+    mean_bias2['location_name'] = mean_bias2['location_name'].str.replace('[^a-zA-Z]', '')
+    r_combined2['state'] = r_combined2['state'].str.replace('[^a-zA-Z]', '')
+    loc_list = set(mean_bias2['location_name'])
+    for loc in loc_list:
+        bias = mean_bias2.loc[mean_bias2['location_name']==loc, 'bias_removed'].iloc[0]
+        if bias > 0:
+            r_combined2.loc[r_combined2['state']==loc, 'Intercept'] = r_combined2.loc[r_combined2['state']==loc, 'Intercept']-bias
+        elif bias < 0:
+            r_combined2.loc[r_combined2['state']==loc, 'Intercept'] = r_combined2.loc[r_combined2['state']==loc, 'Intercept']+bias
+
+    r_combined = r_combined2
+
+
     tti = 0
      
-    states = data['state'].drop_duplicates()
+    states = data['state'].drop_duplicates().str.replace('[^a-zA-Z]', '')
     data2 = data.copy()
-
+    data2['state'] = data2['state'].str.replace('[^a-zA-Z]', '')
     data3 = pd.DataFrame()
     for s in states:
         rc = r_combined[r_combined['state']==s]
@@ -495,8 +590,7 @@ def causal_simulation(path,start_date,f_start_date,datafile="dataset_full.csv",g
                 data3 = data3.append(dat,ignore_index=True )
             tti = tti +1     
 
-    
-    
+    print(data3)
     print(data3['state'].drop_duplicates())
      
     # data3.to_csv(path+"/before_sim_data_test.csv")
