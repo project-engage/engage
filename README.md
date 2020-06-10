@@ -5,7 +5,7 @@
 **Project Objective:**  
   **Primary:** Provide a data science tool to predict how the COVID-19 will continue to infect or how it may die down overtime using weather related inputs by location and also possibly government intervention flags 
   **Secondary:** Open source project to train junior data scientists in using tools such as:  
-    * Spark (pyspark) for large data handling  
-    * Apache Airflow for orchestration  
+    * Python  
+    * Python Statsmodel  
     * Python Visualization using Python visualization module  
     * Help define a data science pipeline  
